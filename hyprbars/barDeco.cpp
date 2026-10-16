@@ -539,8 +539,9 @@ void CHyprBar::renderPass(PHLMONITOR pMonitor, const float& a) {
         g_pHyprOpenGL->renderRect(titleBarBox, color, {.round = scaledRounding, .roundingPower = m_pWindow->roundingPower()});
 
     // render title
-    if (ENABLETITLE && (m_szLastTitle != PWINDOW->m_title || m_bWindowSizeChanged || !m_pTextTex || m_pTextTex->m_texID == 0 || m_bTitleColorChanged)) {
-        m_szLastTitle = PWINDOW->m_title;
+    const auto TITLE = m_forcedTitle.value_or(PWINDOW->m_title);
+    if (ENABLETITLE && (m_szLastTitle != TITLE || m_bWindowSizeChanged || !m_pTextTex || m_pTextTex->m_texID == 0 || m_bTitleColorChanged)) {
+        m_szLastTitle = TITLE;
         renderBarTitle(BARBUF, pMonitor->m_scale);
     }
 
@@ -640,6 +641,11 @@ CBox CHyprBar::assignedBoxGlobal() {
 
 PHLWINDOW CHyprBar::getOwner() {
     return m_pWindow.lock();
+}
+
+void CHyprBar::setTitle(std::optional<std::string> title) {
+    m_forcedTitle = std::move(title);
+    damageEntire();
 }
 
 void CHyprBar::updateRules() {

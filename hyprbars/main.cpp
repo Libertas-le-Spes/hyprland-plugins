@@ -191,6 +191,19 @@ int newLuaButton(lua_State* L) {
     return 0;
 }
 
+int setLuaTitle(lua_State* L) {
+    const auto WINDOW = Config::Lua::Bindings::Internal::windowFromLuaSelectorOrObject(L, 1, "hl.plugin.hyprbars.set_title");
+    if (!WINDOW)
+        return Config::Lua::Bindings::Internal::configError(L, "hl.plugin.hyprbars.set_title: expected a window");
+
+    const auto BARIT = std::ranges::find_if(g_pGlobalState->bars, [&WINDOW](const auto& bar) { return bar && bar->getOwner() == WINDOW; });
+    if (BARIT == g_pGlobalState->bars.end())
+        return Config::Lua::Bindings::Internal::configError(L, "hl.plugin.hyprbars.set_title: the window has no bar");
+
+    (*BARIT)->setTitle(lua_isnoneornil(L, 2) ? std::nullopt : std::optional<std::string>{luaL_checkstring(L, 2)});
+    return 0;
+}
+
 APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     PHANDLE = handle;
 
@@ -252,10 +265,12 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
     HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.iconOnHover);
     HyprlandAPI::addConfigValueV2(PHANDLE, g_pGlobalState->config.onDoubleClick);
 
-    if (Config::mgr()->type() == Config::CONFIG_LEGACY)
+    if (Config::mgr()->type() == Config::CONFIG_LEGACY) {
         HyprlandAPI::addConfigKeyword(PHANDLE, "plugin:hyprbars:hyprbars-button", onNewButton, Hyprlang::SHandlerOptions{});
-    else
+    } else {
         HyprlandAPI::addLuaFunction(PHANDLE, "hyprbars", "add_button", ::newLuaButton);
+        HyprlandAPI::addLuaFunction(PHANDLE, "hyprbars", "set_title", ::setLuaTitle);
+    }
     static auto P4 = Event::bus()->m_events.config.preReload.listen([&] { onPreConfigReload(); });
     static auto P5 = Event::bus()->m_events.config.reloaded.listen([&] { onConfigReloaded(); });
 
